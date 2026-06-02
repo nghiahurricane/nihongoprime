@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="250 144 524 700" fill="none">
+  <defs>
+    <linearGradient id="badge" x1="332" y1="196" x2="704" y2="568" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42D1D9"/>
+      <stop offset="1" stop-color="#0A87BF"/>
+    </linearGradient>
+    <radialGradient id="petal" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(510 372) rotate(90) scale(152 118)">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFE3EC"/>
+    </radialGradient>
+    <filter id="soft" x="292" y="156" width="448" height="448" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#0C6B8A" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <rect x="250" y="144" width="524" height="700" rx="108" fill="#F6FBFD"/>
+
+  <g filter="url(#soft)">
+    <circle cx="516" cy="372" r="182" fill="url(#badge)"/>
+    <path d="M382 434c48-58 132-74 206-40" stroke="#A8F1F8" stroke-width="18" stroke-linecap="round"/>
+    <path d="M360 388c42-50 114-74 178-60" stroke="#C5FAFF" stroke-width="14" stroke-linecap="round"/>
+    <path d="M608 342c24-34 62-56 102-58" stroke="#C8FAFF" stroke-width="14" stroke-linecap="round"/>
+    <path d="M618 388c16-22 40-36 68-38" stroke="#D8FCFF" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(512 372)">
+    <path d="M0-118C30-110 52-82 52-48C52-20 35 6 8 18C-2 22-2 36 8 40C34 52 52 78 52 108C52 142 30 170 0 178C-30 170-52 142-52 108C-52 78-34 52-8 40C2 36 2 22-8 18C-35 6-52-20-52-48C-52-82-30-110 0-118Z" fill="url(#petal)" stroke="#F59AAF" stroke-width="10"/>
+    <path d="M118 0C110 30 82 52 48 52C20 52-6 35-18 8C-22-2-36-2-40 8C-52 34-78 52-108 52C-142 52-170 30-178 0C-170-30-142-52-108-52C-78-52-52-34-40-8C-36 2-22 2-18-8C-6-35 20-52 48-52C82-52 110-30 118 0Z" fill="url(#petal)" stroke="#F59AAF" stroke-width="10"/>
+    <path d="M83-83C107-63 114-28 98 0C86 22 63 35 39 34C29 34 22 45 28 54C43 77 44 108 24 132C2 158-30 166-56 154C-74 128-73 96-58 72C-52 62-58 50-69 49C-93 47-115 32-127 10C-143-19-136-54-112-74C-81-80-51-67-33-44C-27-35-15-37-10-46C5-69 31-84 59-84C68-84 76-84 83-83Z" fill="url(#petal)" stroke="#F59AAF" stroke-width="10"/>
+    <path d="M-83-83C-107-63-114-28-98 0C-86 22-63 35-39 34C-29 34-22 45-28 54C-43 77-44 108-24 132C-2 158 30 166 56 154C74 128 73 96 58 72C52 62 58 50 69 49C93 47 115 32 127 10C143-19 136-54 112-74C81-80 51-67 33-44C27-35 15-37 10-46C-5-69-31-84-59-84C-68-84-76-84-83-83Z" fill="url(#petal)" stroke="#F59AAF" stroke-width="10"/>
+    <circle cx="0" cy="0" r="22" fill="#FFD95A" stroke="#F3A81A" stroke-width="8"/>
+  </g>
+
+  <text x="512" y="708" text-anchor="middle" font-family="'Segoe UI', 'Trebuchet MS', sans-serif" font-size="72" font-weight="700" fill="#0D5068">Nihongo Prime</text>
+</svg>

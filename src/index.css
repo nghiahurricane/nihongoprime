@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Cú pháp chuẩn của Tailwind v4 để kích hoạt Dark Mode bằng class .dark */
+@variant dark (&:where(.dark, .dark *));
+
+/* Thêm hiệu ứng chuyển đổi mượt mà (smooth transition) cho toàn bộ nền và chữ */
+/* Đã thêm scrollbar-gutter: stable để thanh cuộn không làm giật/nhảy layout */
+/* Thêm overscroll-behavior-y để chống nảy background (rubber-banding) khi kéo kịch trần/đáy */
+html, body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+  scrollbar-gutter: stable;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background-color: #f8fafc;
+}
+
+/* Đảm bảo nền của thẻ body tự động đổi khi bật dark mode */
+html.dark body {
+  background-color: #18181b;
+  color: #e5e7eb;
+}
+
+/* CHẶN ZOOM KHI CHẠM ĐÚP (DOUBLE-TAP) TRÊN NÚT BẤM */
+button, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* KHẮC PHỤC TRIỆT ĐỂ LỖI ZOOM TRÊN IPHONE/SAFARI KHI GÕ CHỮ */
+/* Ép cỡ chữ của tất cả các ô nhập liệu trên mobile phải từ 16px trở lên */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Thêm thanh cuộn tùy chỉnh */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c7d2fe; 
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #818cf8; 
+}
+
+@keyframes comboZoomInOut {
+  0% { transform: scale(0.7); opacity: 0; }
+  20% { transform: scale(1.15); opacity: 1; }
+  55% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.92); opacity: 0; }
+}
+
+.combo-zoom {
+  animation: comboZoomInOut 800ms ease-in-out;
+}
+
+@keyframes loadingBarRun {
+  0% {
+    transform: translateX(-140%);
+  }
+  60% {
+    transform: translateX(170%);
+  }
+  100% {
+    transform: translateX(170%);
+  }
+}
+
+.loading-bar-run {
+  animation: loadingBarRun 1.35s ease-in-out infinite;
+  will-change: transform;
+}
