@@ -99,13 +99,118 @@ export default function StudyPage({ vocabList, onFinishLesson, onQuestProgress, 
     if (appState === 'map' && activeIslandRef.current) {
       const timer = setTimeout(() => {
         const element = activeIslandRef.current;
-        const yOffset = 180; 
-        const y = element.getBoundingClientRect().top + window.scrollY - yOffset;
-        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-      }, 300);
+        const rect = element.getBoundingClientRect();
+        const elementCenter = rect.top + rect.height / 2;
+        const viewportCenter = window.innerHeight / 2;
+        const scrollTarget = window.scrollY + elementCenter - viewportCenter;
+        window.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+      }, 350);
       return () => clearTimeout(timer);
     }
   }, [appState, selectedCourse]);
+
+  // ── PRE-BUILT QUEUE cho chế độ autoStart review ──
+  const reviewQueueRef = useRef([]); // hàng đợi câu hỏi đã shuffle sẵn
+  const reviewQueueModeRef = useRef(false); // true khi đang dùng queue thay pickNextTask
+
+  // ── AUTO-START: khi navigate từ HomePage với state { autoStart, studyMode:'REVIEW' } ──
+  const autoStartFiredRef = useRef(false);
+  useEffect(() => {
+    const state = location.state;
+    if (!state?.autoStart || autoStartFiredRef.current) return;
+    if (vocabList.length === 0) return;
+    autoStartFiredRef.current = true;
+
+    // Pool từ đến hạn → fallback đã học → fallback toàn bộ
+    const now = new Date();
+    let reviewWords = vocabList.filter(v => {
+      const d = v.nextReview?.seconds
+        ? new Date(v.nextReview.seconds * 1000)
+        : v.nextReview ? new Date(v.nextReview) : null;
+      return d && d <= now && (v.srsLevel || 0) > 0;
+    });
+    if (reviewWords.length === 0)
+      reviewWords = vocabList.filter(v => (v.srsLevel || 0) > 0 || (v.correctCount || 0) > 0);
+    if (reviewWords.length === 0) reviewWords = [...vocabList];
+
+    const SESSION_SIZE = 20;
+    const LAPS = 2;
+    const sessionWords = shuffleArray(reviewWords).slice(0, SESSION_SIZE);
+
+    // Tạo queue 40 câu: [lap1 shuffled, lap2 shuffled]
+    // Đảm bảo không có 2 câu cùng từ liền nhau bằng cách shuffle có kiểm tra
+    const buildInterleavedQueue = (words, laps) => {
+      // Tạo laps bản copies rồi shuffle từng lap riêng
+      const queue = [];
+      for (let lap = 0; lap < laps; lap++) {
+        queue.push(...shuffleArray(words));
+      }
+      // Kiểm tra và swap nếu 2 từ liền nhau trùng nhau
+      for (let i = 1; i < queue.length; i++) {
+        if (queue[i].id === queue[i - 1].id) {
+          // Tìm phần tử tiếp theo khác để swap
+          for (let j = i + 1; j < queue.length; j++) {
+            if (queue[j].id !== queue[i - 1].id) {
+              [queue[i], queue[j]] = [queue[j], queue[i]];
+              break;
+            }
+          }
+        }
+      }
+      return queue;
+    };
+
+    const queue = buildInterleavedQueue(sessionWords, LAPS);
+
+    // Build task list từ queue (mỗi entry → 1 quiz question)
+    const taskQueue = queue.map(word => {
+      const askType = Math.random() < 0.5 ? 'word' : 'meaning';
+      const answerType = askType === 'word' ? 'meaning' : 'word';
+      const allUniqueAnswers = [...new Set(vocabList.map(v => v[answerType]))];
+      const wrongAnswers = allUniqueAnswers.filter(ans => ans !== word[answerType]);
+      const finalOptions = shuffleArray([word[answerType], ...shuffleArray(wrongAnswers).slice(0, 3)]);
+      return { type: 'quiz', vocab: word, askType, answerType, options: finalOptions };
+    });
+
+    reviewQueueRef.current = taskQueue;
+    reviewQueueModeRef.current = true;
+
+    // progress vẫn cần để tracking kết thúc session
+    const initialProgress = {};
+    sessionWords.forEach(w => { initialProgress[w.id] = 1; });
+
+    const islandConfig = {
+      id: 'quick_review',
+      type: 'regular',
+      label: 'Ôn Tập Nhanh',
+      words: sessionWords,
+      status: 'active',
+      targetSteps: LAPS,
+      skipFlashcard: true,
+      isReviewMode: true,
+      totalQuestions: sessionWords.length * LAPS,
+    };
+
+    setCurrentIslandConfig(islandConfig);
+    setPool(sessionWords);
+    setProgress(initialProgress);
+    setStats({ correct: 0, wrong: 0 });
+    setCombo(0); setComboMsg(''); setShowCombo(false);
+    setExpGained(0); setShowConfetti(false);
+    setSelectedAnswer(null);
+    combo10ReachedRef.current = false;
+    studyQuestProgressSentRef.current = 0;
+    setSessionExpMultiplier(1);
+    setShieldAvailable(false);
+    setShieldUsed(false);
+
+    setAppState('playing');
+    // Lấy câu đầu tiên từ queue thay vì pickNextTask
+    const firstTask = taskQueue[0];
+    reviewQueueRef.current = taskQueue.slice(1);
+    setCurrentTask(firstTask);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, vocabList]);
 
   const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);   
 
@@ -494,7 +599,37 @@ export default function StudyPage({ vocabList, onFinishLesson, onQuestProgress, 
     }          
     
     setProgress(p);     
-    setSelectedAnswer(null);     
+    setSelectedAnswer(null);
+
+    // ── Queue mode (autoStart review): pop câu tiếp từ hàng đợi ──
+    if (reviewQueueModeRef.current) {
+      const remaining = reviewQueueRef.current;
+      if (remaining.length === 0) {
+        // Hết queue → kết thúc session
+        if (onFinishLesson) {
+          onFinishLesson({
+            type: 'study_session',
+            mode: 'REVIEW',
+            wordsStudied: pool.length,
+            studyQuestProgressSent: studyQuestProgressSentRef.current,
+            reachedCombo10: combo10ReachedRef.current,
+          });
+        }
+        const bonus = Math.round(pool.length * currentIslandConfig.targetSteps * EXP_REWARDS.QUIZ_CORRECT * sessionExpMultiplier);
+        setExpGained(prev => prev + bonus);
+        if (addExp) addExp(bonus);
+        setShowConfetti(true);
+        setAppState('result');
+        reviewQueueModeRef.current = false;
+      } else {
+        // Pop câu tiếp theo
+        const next = remaining[0];
+        reviewQueueRef.current = remaining.slice(1);
+        setCurrentTask(next);
+      }
+      return;
+    }
+
     pickNextTask(pool, p, currentIslandConfig.targetSteps, currentIslandConfig.skipFlashcard, currentIslandConfig.isReviewMode);   
   };   
 
@@ -844,19 +979,33 @@ export default function StudyPage({ vocabList, onFinishLesson, onQuestProgress, 
                 ✖ Rời đảo
               </button>
               
-              <span className="font-bold text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{currentIslandConfig?.label}</span>
+              <span className="font-bold text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider">{currentIslandConfig?.id === 'quick_review' ? '' : currentIslandConfig?.label}</span>
 
-              {combo >= 2 && (
-                <span className="font-bold text-orange-500 text-sm animate-pulse inline-flex items-center gap-1 whitespace-nowrap">
-                  🔥 Combo x{combo}
-                </span>
-              )}
               <span className="font-black text-indigo-600 dark:text-indigo-400">
                 {Math.round((Object.values(progress).reduce((a, b) => {
                   const val = b > (currentIslandConfig.skipFlashcard ? 1 + currentIslandConfig.targetSteps : currentIslandConfig.targetSteps) ? (currentIslandConfig.skipFlashcard ? 1 + currentIslandConfig.targetSteps : currentIslandConfig.targetSteps) : b;
                   return a + (currentIslandConfig.skipFlashcard ? Math.max(0, val - 1) : val);
                 }, 0) / (currentIslandConfig.skipFlashcard ? pool.length * currentIslandConfig.targetSteps : pool.length * currentIslandConfig.targetSteps)) * 100) || 0}%
               </span>
+            </div>
+
+            {/* Progress bar + combo badge centered below */}
+            <div className="relative">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 h-3 rounded-full overflow-hidden">
+                <div className="bg-indigo-500 dark:bg-indigo-400 h-full transition-all duration-500 ease-out"
+                  style={{ width: `${Math.round((Object.values(progress).reduce((a, b) => {
+                    const val = b > (currentIslandConfig.skipFlashcard ? 1 + currentIslandConfig.targetSteps : currentIslandConfig.targetSteps) ? (currentIslandConfig.skipFlashcard ? 1 + currentIslandConfig.targetSteps : currentIslandConfig.targetSteps) : b;
+                    return a + (currentIslandConfig.skipFlashcard ? Math.max(0, val - 1) : val);
+                  }, 0) / (currentIslandConfig.skipFlashcard ? pool.length * currentIslandConfig.targetSteps : pool.length * currentIslandConfig.targetSteps)) * 100) || 0}%` }}>
+                </div>
+              </div>
+              {combo >= 2 && (
+                <div className="flex justify-center mt-2">
+                  <span className="font-bold text-orange-500 text-sm animate-pulse inline-flex items-center gap-1">
+                    🔥 Combo x{combo}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2 mb-2 mt-2">
               {sessionExpMultiplier > 1 && (
@@ -868,13 +1017,6 @@ export default function StudyPage({ vocabList, onFinishLesson, onQuestProgress, 
                 </span>
               )}
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 h-3 rounded-full overflow-hidden">           
-              <div className="bg-indigo-500 dark:bg-indigo-400 h-full transition-all duration-500 ease-out" 
-                   style={{ width: `${Math.round((Object.values(progress).reduce((a, b) => {
-                     const val = b > (currentIslandConfig.skipFlashcard ? 1 + currentIslandConfig.targetSteps : currentIslandConfig.targetSteps) ? (currentIslandConfig.skipFlashcard ? 1 + currentIslandConfig.targetSteps : currentIslandConfig.targetSteps) : b;
-                     return a + (currentIslandConfig.skipFlashcard ? Math.max(0, val - 1) : val);
-                   }, 0) / (currentIslandConfig.skipFlashcard ? pool.length * currentIslandConfig.targetSteps : pool.length * currentIslandConfig.targetSteps)) * 100) || 0}%` }}></div>         
-            </div>       
           </div>       
 
           {currentTask.type === 'flashcard' ? (         

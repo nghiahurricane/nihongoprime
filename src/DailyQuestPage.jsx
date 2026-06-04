@@ -628,130 +628,81 @@ export function useDailyQuests(user, userData, addExp) {
   };
 }
 
-function DailyQuestPanel({ user, userData, addExp }) {
+function DailyQuestPageMain({ user, userData, addExp }) {
   const { quests, loading, error, bonusClaimed, claimQuest, claimChainBonus, rerollQuests, meta } = useDailyQuests(user, userData, addExp);
-  const [open, setOpen] = useState(false);
 
   const completedCount = quests.filter((q) => q.claimed).length;
-  const readyCount = quests.filter((q) => q.current >= q.target && !q.claimed).length;
   const allClaimed = quests.length > 0 && completedCount === quests.length;
 
-  const weekly = meta.weekly || sanitizeWeeklyState(userData?.questWeekly, getWeekStartKey(todayKey()), todayKey());
-
-  const raritySummary = useMemo(() => {
-    const counts = meta.rarityCounts || { common: 0, rare: 0, epic: 0 };
-    return `C:${counts.common || 0} R:${counts.rare || 0} E:${counts.epic || 0}`;
-  }, [meta.rarityCounts]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
-      setOpen(false);
-      return;
-    }
-
-    const key = `nihongo:questPanel:autoOpen:${todayKey()}`;
-    if (localStorage.getItem(key)) return;
-    setOpen(true);
-    localStorage.setItem(key, '1');
-  }, []);
-
-  if (loading) return null;
+  if (loading) return <div className="p-10 text-center text-gray-500 font-bold animate-pulse">Đang tải nhiệm vụ...</div>;
 
   return (
-    <div className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] md:bottom-6 right-4 z-40">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="relative w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg flex items-center justify-center text-2xl active:scale-95 transition-transform"
-      >
-        📋
-        {readyCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-black rounded-full flex items-center justify-center animate-pulse">
-            {readyCount}
-          </span>
-        )}
-      </button>
-      {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="absolute bottom-16 right-0 z-10 min-w-[150px] bg-indigo-600 text-white text-xs font-black px-3 py-2 rounded-xl shadow-[0_10px_25px_rgba(79,70,229,0.35)] hover:bg-indigo-700 transition-colors text-center leading-tight"
-        >
-          Nhiệm vụ ngày {completedCount}/{Math.max(1, quests.length)}
-        </button>
-      )}
-
-      {open && (
-        <div className="absolute bottom-16 right-0 w-84 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="bg-linear-to-r from-indigo-500 to-purple-600 p-4 text-white">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="font-black text-lg">📋 Chuỗi Nhiệm Vụ Ngày</h3>
-                <p className="text-white/80 text-xs mt-0.5">{meta.eventLabel}</p>
-                <p className="text-white/75 text-[11px] mt-0.5">Độ hiếm {raritySummary}</p>
-              </div>
-              <span className="font-black text-2xl">{completedCount}/{quests.length}</span>
-            </div>
-            <div className="mt-2 bg-white/20 rounded-full h-2 overflow-hidden">
-              <div className="bg-white h-full rounded-full transition-all" style={{ width: `${(completedCount / Math.max(1, quests.length)) * 100}%` }} />
-            </div>
-            <div className="mt-2 text-[11px] text-white/80 font-bold">Weekly {weekly.daysCompleted || 0}/7 ngày</div>
+    <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mt-6 mb-20">
+      
+      {/* Banner của Trang */}
+      <div className="bg-linear-to-r from-indigo-500 to-purple-600 p-6 text-white">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h2 className="font-black text-2xl">📋 Nhiệm Vụ Hàng Ngày</h2>
+            <p className="text-white/80 text-sm mt-1">{meta.eventLabel}</p>
           </div>
-          <div className="p-3 flex flex-col gap-2 max-h-[26rem] overflow-y-auto">
-            {error && (
-              <div className="text-xs font-bold rounded-xl border border-amber-200 bg-amber-50 text-amber-700 px-3 py-2 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
-                {error}
-              </div>
-            )}
+          <span className="font-black text-3xl">{completedCount}/{quests.length}</span>
+        </div>
+        <div className="mt-4 bg-white/20 rounded-full h-3 overflow-hidden">
+          <div className="bg-white h-full rounded-full transition-all duration-500" style={{ width: `${(completedCount / Math.max(1, quests.length)) * 100}%` }} />
+        </div>
+      </div>
 
-            <div className="rounded-xl border border-indigo-100 dark:border-gray-700 bg-indigo-50/60 dark:bg-gray-900 px-3 py-2 flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">Đổi nhiệm vụ hôm nay</p>
-                <p className="text-[11px] text-indigo-500 dark:text-indigo-400">Còn {meta.rerollsLeft} lần</p>
-              </div>
+      <div className="p-6 flex flex-col gap-4">
+        {error && (
+          <div className="text-sm font-bold rounded-xl border border-amber-200 bg-amber-50 text-amber-700 px-4 py-3 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">
+            {error}
+          </div>
+        )}
+
+        {/* Nút đổi nhiệm vụ */}
+        <div className="rounded-2xl border border-indigo-100 dark:border-gray-700 bg-indigo-50/60 dark:bg-gray-900 p-4 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-black text-indigo-700 dark:text-indigo-300">Bạn muốn đổi nhiệm vụ khác?</p>
+            <p className="text-xs font-medium text-indigo-500 dark:text-indigo-400 mt-0.5">Hôm nay còn {meta.rerollsLeft} lần đổi</p>
+          </div>
+          <button
+            onClick={rerollQuests}
+            disabled={meta.rerollsLeft <= 0}
+            className={`text-sm font-black px-4 py-2 rounded-xl transition-all ${meta.rerollsLeft > 0 ? 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'}`}
+          >
+            Đổi nhiệm vụ
+          </button>
+        </div>
+
+        {/* Danh sách nhiệm vụ */}
+        <div className="flex flex-col gap-3 mt-2">
+          {quests.map((q) => (
+            <QuestBar key={q.id} quest={{ ...q, onClaim: () => claimQuest(q.id) }} />
+          ))}
+        </div>
+
+        {/* Hộp quà chuỗi ngày */}
+        <div className={`mt-4 p-5 rounded-2xl border-2 transition-colors ${bonusClaimed ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 opacity-70' : allClaimed ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-400 dark:border-yellow-600 shadow-md' : 'bg-gray-50 dark:bg-gray-900 border-dashed border-gray-200 dark:border-gray-700'}`}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-black text-base text-yellow-700 dark:text-yellow-400">🏆 Thưởng hoàn thành chuỗi</p>
+              <p className="text-sm font-bold text-gray-600 dark:text-gray-300 mt-1">+{QUEST_CHAIN_BONUS.rewardExp} EXP · +{QUEST_CHAIN_BONUS.rewardCoins} <CoinIcon className="w-4 h-4" /></p>
+            </div>
+            {bonusClaimed ? (
+              <span className="text-green-600 dark:text-green-400 font-black px-4 py-2 bg-green-100 dark:bg-green-900/30 rounded-xl">Đã nhận ✔️</span>
+            ) : (
               <button
-                onClick={rerollQuests}
-                disabled={meta.rerollsLeft <= 0}
-                className={`text-xs font-black px-3 py-1.5 rounded-lg ${meta.rerollsLeft > 0 ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'}`}
+                onClick={claimChainBonus}
+                disabled={!allClaimed}
+                className={`font-black text-sm px-5 py-2.5 rounded-xl transition-all ${allClaimed ? 'bg-yellow-500 hover:bg-yellow-600 text-white active:scale-95 shadow-lg shadow-yellow-500/30 animate-bounce' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'}`}
               >
-                Đổi quest
+                Mở quà
               </button>
-            </div>
-
-            {quests.map((q) => (
-              <QuestBar key={q.id} quest={{ ...q, onClaim: () => claimQuest(q.id) }} />
-            ))}
-
-            <div className={`mt-1 p-4 rounded-2xl border-2 ${bonusClaimed ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 opacity-70' : allClaimed ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-400 dark:border-yellow-600' : 'bg-gray-50 dark:bg-gray-900 border-dashed border-gray-200 dark:border-gray-700'}`}>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-black text-sm text-yellow-700 dark:text-yellow-400">🏆 Thưởng chuỗi ngày</p>
-                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-1">+{QUEST_CHAIN_BONUS.rewardExp} EXP · +{QUEST_CHAIN_BONUS.rewardCoins} <CoinIcon className="w-3.5 h-3.5" /></p>
-                  <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">Tuần: 3 ngày +{DAILY_WEEKLY_BONUS.threeDay.rewardExp} EXP, 7 ngày +{DAILY_WEEKLY_BONUS.sevenDay.rewardExp} EXP</p>
-                </div>
-                {bonusClaimed ? (
-                  <span className="text-green-600 dark:text-green-400 font-black text-xs">Đã nhận</span>
-                ) : (
-                  <button
-                    onClick={claimChainBonus}
-                    disabled={!allClaimed}
-                    className={`font-black text-xs px-3 py-2 rounded-xl transition-transform ${allClaimed ? 'bg-yellow-500 hover:bg-yellow-600 text-white active:scale-95' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'}`}
-                  >
-                    Nhận lớn
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2">
-              <p className="text-xs font-black text-gray-700 dark:text-gray-200">Xem trước ngày mai · {meta.tomorrowPreview?.eventLabel || ''}</p>
-              <div className="mt-1 flex flex-col gap-1">
-                {(meta.tomorrowPreview?.quests || []).slice(0, 3).map((q) => (
-                  <p key={`preview-${q.id}`} className="text-[11px] font-bold text-gray-600 dark:text-gray-300">{q.icon} {q.label}</p>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -766,4 +717,5 @@ export {
   buildQuestDefs as getQuestDefsForDate,
 };
 
-export default DailyQuestPanel;
+// Đổi tên export mặc định thành Page để tương thích với Routes trong App.jsx
+export default DailyQuestPageMain;
